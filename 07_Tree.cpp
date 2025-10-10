@@ -650,6 +650,161 @@ bool hasPathSum02(TreeNode* root, int targetSum) {
            hasPathSum(root->right, targetSum - root->val);
 }
 
+// 106.构造二叉树
+// 给定两个整数数组 inorder 和 postorder，其中 inorder 是二叉树的中序遍历，postorder 是同一棵树的后序遍历，请你构造并返回这颗二叉树
+// 核心思想：借助后序确定根节点，借助中序确定左右子树
+std::unordered_map<int, int> inorder_map; // 值到中序索引的映射
+int postorder_index;    // 后序遍历的当前索引
+
+TreeNode* buildTreeHelper(vector<int>& inorder, vector<int>& postorder,
+                          int inorder_start, int inorder_end) {
+    // 递归终止条件
+    if (inorder_start > inorder_end) {
+        return nullptr;
+    }
+    // 后序遍历的最后一个元素，是当前子树的根节点
+    int root_val = postorder[postorder_index];
+    postorder_index--; 
+    TreeNode* root = new TreeNode(root_val);      
+    // 在中序遍历中找到根节点的位置
+    int root_index = inorder_map[root_val];
+    // 递归构造右子树 （注意：先构造右子树，因为后序遍历是左->右->根）
+    // 在右子树的递归中，构建完成左右的右子树，自然，下一个待处理的根是左子树根节点
+    // 因此先右再左，顺序不能反，从后往前看，后续遍历是，根，右，左
+    root->right = buildTreeHelper(inorder, postorder, root_index+1, inorder_end);
+    // 递归构造左子树
+    root->left = buildTreeHelper(inorder, postorder, inorder_start, root_index - 1);
+
+    return root;
+
+}
+
+TreeNode* buildTree(vector<int>& inorder, vector<int>& postorder) {
+    // 构建中序遍历中值到索引的映射，用于快速查找根节点位置
+    for (int i = 0; i < inorder.size(); i++) {
+        inorder_map[inorder[i]] = i;
+    }
+    postorder_index = postorder.size() - 1;
+
+    return buildTreeHelper(inorder, postorder, 0, inorder.size() - 1);
+}
+
+
+// 只给前序遍历、中序遍历、后续遍历或者层序遍历中的一个，一般来说，是无法构建唯一二叉树的
+// 如果是完满或完全二叉树，任何一种遍历序列，都可以唯一确定一棵树。例如：
+// 根据层序遍历构造完全二叉树
+TreeNode* buildCompleteBinaryTree(vector<int>& levelOrder) {
+    if (levelOrder.empty()) return nullptr;
+    
+    vector<TreeNode*> nodes;
+    // 创建所有节点
+    for (int val : levelOrder) {
+        nodes.push_back(new TreeNode(val));
+    }
+    
+    // 连接父子节点
+    for (int i = 0; i < nodes.size(); i++) {
+        int leftChildIdx = 2 * i + 1;
+        int rightChildIdx = 2 * i + 2;
+        
+        if (leftChildIdx < nodes.size()) {
+            nodes[i]->left = nodes[leftChildIdx];
+        }
+        if (rightChildIdx < nodes.size()) {
+            nodes[i]->right = nodes[rightChildIdx];
+        }
+    }
+    
+    return nodes[0];
+}
+
+// 如果是二叉搜索树，仅凭前序、后序或层序遍历就可以唯一构造
+// 注意，中序遍历是不行的
+// 根据BST的前序遍历构造BST
+TreeNode* buildBSTFromPreorder(vector<int>& preorder) {
+    if (preorder.empty()) return nullptr;
+    
+    TreeNode* root = new TreeNode(preorder[0]);
+    
+    for (int i = 1; i < preorder.size(); i++) {
+        insertIntoBST(root, preorder[i]);
+    }
+    
+    return root;
+}
+
+void insertIntoBST(TreeNode* root, int val) {
+    if (val < root->val) {
+        if (root->left == nullptr) {
+            root->left = new TreeNode(val);
+        } else {
+            insertIntoBST(root->left, val);
+        }
+    } else {
+        if (root->right == nullptr) {
+            root->right = new TreeNode(val);
+        } else {
+            insertIntoBST(root->right, val);
+        }
+    }
+}
+// 654.最大二叉树
+// 类似中序 + 后序构建二叉树，把后序节点，换成数组中的最大值
+TreeNode* constructMaximumBinaryTreeHelper(const std::vector<int>& nums, int start, int end) {
+    if (start > end) {
+        return nullptr;
+    }
+    // 找到区间最大值及最大值的索引
+    int maxIndex = start;
+    int maxValue = nums[start];
+    for (int i = start + 1; i <= end; i++) {
+        if (nums[i] > maxValue) {
+            maxValue = nums[i];
+            maxIndex = i;
+        }
+    }
+    TreeNode* root = new TreeNode(nums[maxIndex]);
+
+    root->left = constructMaximumBinaryTreeHelper(nums, start, maxValue - 1);
+    root->right = constructMaximumBinaryTreeHelper(nums, maxValue + 1, end);
+
+    return root;
+} 
+
+TreeNode* constructMaximumBinaryTree(const std::vector<int>& nums) {
+    if (nums.empty()) {
+        return nullptr;
+    }
+    return constructMaximumBinaryTreeHelper(nums, 0, nums.size() - 1);
+}
+
+// 617.合并两个二叉树
+TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2) {
+    // 合并规则：
+    // 1. 如果 root1 和 root2 都为空，则返回 nullptr。
+    // 2. 如果 root1 为空，root2 不为空，则返回 root2。
+    // 3. 如果 root1 不为空，root2 为空，则返回 root1。
+    // 4. 如果 root1 和 root2 都不为空：
+    //    a. 创建一个新的 TreeNode，其值为 root1->val + root2->val。
+    //    b. 递归地合并它们的左子树，并将结果赋给新节点的左子节点。
+    //    c. 递归地合并它们的右子树，并将结果赋给新节点的右子节点。
+    //    d. 返回新节点。
+    if (root1 == nullptr && root2 == nullptr) {
+        return nullptr;
+    }
+    if (root1 == nullptr) {
+        return root2;
+    }
+    if (root2 == nullptr) {
+        return root1;
+    }
+    // root1 与 root2 都不空的情况
+    // 先创建一个根节点
+    TreeNode* merged = new TreeNode(root1->val + root2->val);
+    merged->left = mergeTrees(root1->left, root2->left);
+    merged->right = mergeTrees(root1->right, root2->right);
+    return merged;
+}
 
 
 
@@ -673,18 +828,7 @@ bool hasPathSum02(TreeNode* root, int targetSum) {
 
 
 
-// 二叉树：404.左叶子之和](./problems/0404.左叶子之和.md)
-// 二叉树：513.找树左下角的值](./problems/0513.找树左下角的值.md)
-// 二叉树：112.路径总和](./problems/0112.路径总和.md)
-// 二叉树：106.构造二叉树](./problems/0106.从中序与后序遍历序列构造二叉树.md)
-// 二叉树：654.最大二叉树](./problems/0654.最大二叉树.md)
-// * [本周小结！（二叉树）](./problems/周总结/20201010二叉树周末总结.md)
-// * [二叉树：617.合并两个二叉树](./problems/0617.合并二叉树.md)
-// * [二叉树：700.二叉搜索树登场！](./problems/0700.二叉搜索树中的搜索.md)
-// * [二叉树：98.验证二叉搜索树](./problems/0098.验证二叉搜索树.md)
-// * [二叉树：530.搜索树的最小绝对差](./problems/0530.二叉搜索树的最小绝对差.md)
-// * [二叉树：501.二叉搜索树中的众数](./problems/0501.二叉搜索树中的众数.md)
-// * [二叉树：236.公共祖先问题](./problems/0236.二叉树的最近公共祖先.md)
+
 // * [本周小结！（二叉树）](./problems/周总结/20201017二叉树周末总结.md)
 // * [二叉树：235.搜索树的最近公共祖先](./problems/0235.二叉搜索树的最近公共祖先.md)
 // * [二叉树：701.搜索树中的插入操作](./problems/0701.二叉搜索树中的插入操作.md)
