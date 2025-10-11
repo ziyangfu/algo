@@ -806,6 +806,271 @@ TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2) {
     return merged;
 }
 
+// 700.二叉搜索树登场，0700.二叉搜索树中的搜索
+// 首先可以使用最基本的二叉树遍历来搜索，不利用二叉搜索树的性质
+TreeNode* searchBST(TreeNode* root, int val) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    if (root->val == val) {
+        return root;
+    }
+    TreeNode* left = searchBST(root->left, val);
+    if (left != nullptr) {
+        return left;
+    }
+    TreeNode* right = searchBST(root->right, val);
+    return right;
+}
+// 使用二叉搜索树特性
+// 二叉搜索树的特性是，左子树的值小于根节点，右子树值大于根节点，递归
+TreeNode* searchBST02(TreeNode* root, int val) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    if (val == root->val) {
+        return root;
+    }
+    if (val < root->val) {
+        return searchBST(root->left, val);
+    }
+    else {
+        return searchBST(root->left, val);
+    }
+}
+// 迭代形式
+TreeNode* searchBST_Iterative(TreeNode* root, int val) {
+    while (root != nullptr) {
+        if (val == root->val) {
+            return root;
+        }
+        else if (val < root->val) {
+            root = root->left; // 目标值较小，向左走
+        }
+        else {
+            root = root->right; // 目标值较大，向右走
+        }
+    }
+    return nullptr;
+}
+// 98.验证二叉搜索树
+// 判断一个给定的二叉树是否是一个有效的二叉搜索树（Binary Search Tree, BST）
+// 1. 左低右高 2. 递归同样成立 3. 值唯一
+// 存在的问题：1. 空指针解引用，如果root是叶子节点，则root->left和root->right会解引用空指针
+//           2. 二叉搜索树是左子树的所有节点，都要小于根节点，右子树所有节点都要大于根节点，
+//              注意，是所有，下面的时候，只是左子节点小于根节点，当然不对 
+bool isValidBST_error(TreeNode* root) {
+    if (root == nullptr) {
+        return true;
+    }
+    // 遍历所有的节点，对每一个节点
+    if ((root->left->val < root->val) == false) {
+        return false;
+    };
+    if ((root->right->val > root->val) == false) {
+        return false;
+    };
+    bool leftB = isValidBST(root->left);
+    bool rightB = isValidBST(root->right); 
+    return leftB && rightB;
+}
+// 正确的实现
+bool isValidBSTHelper(TreeNode* root, long minVal, long maxVal  ) { 
+    if (root == nullptr) {
+        return true; // 空树是有效的 BST
+    }
+    // 检查当前节点的值是否在允许的范围内
+        // 注意：这里使用 long 来避免 int 溢出，以防 minVal 或 maxVal 是 int 的最小值或最大值
+    if (root->val <= minVal || root->val >= maxVal) {
+        return false;
+    }
+    // 递归检查左子树：左子树的所有值必须在 minVal 和 node->val 之间
+    // 递归检查右子树：右子树的所有值必须在 node->val 和 maxVal 之间
+    bool leftB = isValidBSTHelper(root->left, minVal, root->val);
+    bool rightB = isValidBSTHelper(root->right, root->val, maxVal);
+    return leftB && rightB;
+}
+bool isValidBST(TreeNode* root) {
+    // 初始调用时，最小值设为负无穷，最大值设为正无穷
+    // 使用 long long 以确保可以处理 int 范围内的所有值，包括 INT_MIN 和 INT_MAX
+    return isValidBSTHelper(root, LONG_MIN, LONG_MAX);
+
+}
+// 还有一个特点，二叉搜索树的中序遍历，是一个单调递增的序列
+// 因此可以中序遍历，得到一个序列，然后查看这个序列，是否是单调递增的
+void inOrderHelper(TreeNode* root, std::vector<int>& vec) { 
+    if (root == nullptr) {
+        return;
+    }
+    inOrderHelper(root->left, vec);
+    vec.push_back(root->val);
+    inOrderHelper(root->right, vec);
+}
+bool isValidBST_02(TreeNode* root) {
+    std::vector<int> vec;
+    inOrderHelper(root, vec);
+    for (int i = 0; i < vec.size() - 1; i++) {
+        if (vec[i + 1] - vec[i] <= 0) { // 有重复值也是不符合要求的
+            return false;
+        }
+    }
+    return true;
+}
+// 530.搜索树的最小绝对差
+// 任意两个不同节点之间值的绝对差的最小值
+// 通过前面的inOrder遍历，得到一个有序的序列
+int getMinimumDifference(TreeNode* root) {
+    std::vector<int> vec;
+    int min = INT_MAX;
+    inOrderHelper(root, vec);
+    for (int i = 0; i < vec.size() - 1; i++) {
+        min = std::min(min, vec[i + 1] - vec[i]);
+    }
+    return min;
+}
+
+// 更优方案
+// 优化空间复杂度
+// 我们可以不必显式地存储整个有序序列。在进行中序遍历的过程中，我们只需要记录 
+// 前一个被访问的节点（previous node） 的值，然后将当前节点的值与前一个节点的值
+// 进行比较即可。这样就可以将空间复杂度从 O(N) 优化到 O(1)（如果不考虑递归栈空间的话）。
+// 下面是优化后的实现思路：
+// 在遍历函数中维护一个指向前一个节点的指针 prev。
+// 同样进行中序遍历（左 -> 根 -> 右）。
+// 在处理根节点时：
+//      检查 prev 是否为 nullptr。如果不是，说明我们已经访问过一个节点了。
+//      计算当前节点 root->val 与前一个节点 prev->val 的差值，并更新全局的最小差值。
+//      将 prev 更新为当前节点
+void inOrderTraversal(TreeNode* root) {
+    if (root == nullptr) {
+        return;
+    }
+
+    // 1. 遍历左子树
+    inOrderTraversal(root->left);
+
+    // 2. 处理当前节点
+    if (prevNode != nullptr) {
+        // 如果前一个节点存在，计算差值并更新最小值
+        minDiff = std::min(minDiff, root->val - prevNode->val);
+    }
+    // 更新前一个节点为当前节点
+    prevNode = root;
+
+    // 3. 遍历右子树
+    inOrderTraversal(root->right);
+}
+int getMinimumDifference02(TreeNode* root) {
+    inOrderTraversal(root);
+    return minDiff;
+}
+// 501.二叉搜索树中的众数
+// 含重复值的 二叉搜索树（BST） 的根节点 root，
+// 找出并返回其中的 众数（即出现频率最高的元素
+
+// 哈希表法
+void findModeHelper(TreeNode* root, std::unordered_map<int, int>& map) { 
+    if (root == nullptr) {
+        return;
+    }
+    map[root->val]++;
+    findModeHelper(root->left, map);
+    findModeHelper(root->right, map);
+}
+// O(N)
+std::vector<int> findMode(TreeNode* root) {
+    std::vector<int> vec;
+    int max = 0;
+    std::unordered_map<int, int> map; // 值， 频率
+    findModeHelper(root, map);
+    
+    for (auto it = map.begin(); it != map.end(); it++) {
+        if (it->second > max) {
+            max = it->second;
+        }
+    }
+    for (auto it = map.begin(); it != map.end(); it++) {
+        if (it->second == max) {
+            vec.push_back(it->first);
+        }
+    }
+    return vec;
+}
+
+std::vector<int> result;    // 存储众数
+int maxCount = 0;           // 全局最高频率
+int currentCount = 0;       // 当前元素的频率
+int preVal = INT_MIN;// 上一个访问的节点值 (INT_MIN 确保第一个元素能被正确初始化)
+
+void inOrderTraversal(TreeNode* root) {
+    if (root == nullptr) {
+        return;
+    }
+    inOrderTraversal(root->left);
+    // 2. 处理根节点（关键逻辑）
+    // 统计频率
+    if (root->val == prevVal) {
+        currentCount++;
+    }
+    else {
+        // 遇到了一个新的值， 重置频率
+        preVal = root->val;
+        currentCount = 1;
+    }
+
+    // 更新结果集
+    if (currentCount > maxCount) {
+        maxCount = currentCount; // 找到新的最高频率
+        result.clear(); // 清空旧的众数
+        result.push_back(root->val); 
+    }
+    else if (currentCount == maxCount) {
+        result.push_back(root->val); // 当前值也是众数
+    }
+
+    inOrderTraversal(root->right); 
+}
+// 236.公共祖先问题
+// 非递减数组法
+std::vector<int> findMode02(TreeNode* root) {
+    inorderTraversal(root);
+    return result;
+}
+// 自低向上递归
+TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    // 命中目标，等待另一个目标从另一侧子树或上层节点返回
+    if (root == p || root == q) {
+        return root;
+    }
+
+    TreeNode* leftT = lowestCommonAncestor(root->left, p, q);  // 左子树
+    TreeNode* rightT = lowestCommonAncestor(root->right, p, q); // 右子树
+    // 后序，此时根节点的左右子树都遍历完了，注意，后序遍历是自下而上的
+    // 4. 汇总结果并判断 LCA
+    //  p 和 q 分布在 root 的两侧，那么 root 就是 LCA。
+    if (leftT != nullptr && rightT != nullptr) {
+        return root; // p，q分别在左右子树中，则当前节点是公共祖先节点
+    }
+    // 左侧非空，右侧为空
+    // p 和 q 都在左子树中，或者 p 或 q 就是 left 返回的节点，LCA 在左边。
+    // 将 left (即找到的节点或 LCA) 继续向上传递。
+    if (leftT != nullptr) {
+        return leftT;
+    }
+    // 情况 C：左侧为空，右侧非空
+    // p 和 q 都在右子树中，LCA 在右边。
+    // 将 right (即找到的节点或 LCA) 继续向上传递。
+    if (rightT != nullptr) {
+        return rightT;
+    }
+    // 情况 D：左右皆空 ( left == nullptr && right == nullptr )
+    // 当前子树中没有 p 或 q，返回空。
+    return nullptr; 
+}
+// 思路，如果p，q分别在某节点的左子树或右子树中，则说明当前节点是公共祖先节点
 
 
 
@@ -823,19 +1088,6 @@ TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2) {
 
 
 
-
-
-
-
-
-
-// * [本周小结！（二叉树）](./problems/周总结/20201017二叉树周末总结.md)
-// * [二叉树：235.搜索树的最近公共祖先](./problems/0235.二叉搜索树的最近公共祖先.md)
-// * [二叉树：701.搜索树中的插入操作](./problems/0701.二叉搜索树中的插入操作.md)
-// * [二叉树：450.搜索树中的删除操作](./problems/0450.删除二叉搜索树中的节点.md)
-// * [二叉树：669.修剪二叉搜索树](./problems/0669.修剪二叉搜索树.md)
-// * [二叉树：108.将有序数组转换为二叉搜索树](./problems/0108.将有序数组转换为二叉搜索树.md)
-// * [二叉树：538.把二叉搜索树转换为累加树](./problems/0538.把二叉搜索树转换为累加树.md)
 
 
 
