@@ -1072,7 +1072,319 @@ TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
 }
 // 思路，如果p，q分别在某节点的左子树或右子树中，则说明当前节点是公共祖先节点
 
+// 235.搜索树的最近公共祖先
+// 特别在于二叉搜索树，利用BST特性剪枝
+TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    // p、q都比root小，所以pq都在左边
+    if (p->val < root->val && q->val < root->val) {
+        return lowestCommonAncestor(root->left, p, q);
+    }
+    // p、q都比root大, 所以pq都在右边
+    if (p->val > root->val && q->val > root->val) {
+        return lowestCommonAncestor(root->right, p, q);
+    }
+    // p在左边，q在右边，或者 p在右边，q在左边
+    // 此时 root 就是 p 和 q 的最近公共祖先
+    // 怎么理解最近？自底向上，最先达标的，肯定是最近
+    if (p->val < root->val && q->val > root->val) {
+        return root;
+    }
+}
+// 701.搜索树中的插入操作
+// 插入值到二叉搜索树的合适位置
+TreeNode* insertIntoBST(TreeNode* root, int val) {
+    // 1. 基线条件：找到插入位置
+    // 如果 root 为空，说明我们已经到达了树的边缘，这里就是新节点的位置
+    // 它返回后，要么会挂在root->left，要么就挂在root->right
+    if (root == nullptr) {
+        return new TreeNode(val);
+    }
+    // 严格来说，不存在相同的值
+    if (val < root->val) {
+        // 如果 val 小于当前节点值，则应该插入到左子树
+        // 关键：将左子树递归调用的返回值赋值给 root->left
+        // 这样，如果左子树返回一个新节点（即基线条件被触发），
+        // 那么这个新节点就会被正确地链接到 root 上。
+        root->left = insertIntoBST(root->left, val);
+    }
+    if (val > root->val) {
+        root->right = insertIntoBST(root->right, val);
+    }
+    // 3. 返回当前节点
+    // 在返回路径上，每个节点都保持不变（结构可能因左右子树的更改而改变）
+    return root; // 占位符
+}
+// 迭代法
+TreeNode* insertIntoBST_Iterative(TreeNode* root, int val) {
+    TreeNode* newNode = new TreeNode(val);
 
+    // 特殊情况：树为空
+    if (root == nullptr) {
+        return newNode;
+    }
+
+    TreeNode* current = root;
+    TreeNode* parent = nullptr;
+
+    // 1. 寻找插入位置（循环直到 current 为 nullptr）
+    while (current != nullptr) {
+        parent = current; // 记录当前节点作为父节点
+        
+        if (val < current->val) {
+            current = current->left;
+        } else if (val > current->val) {
+            current = current->right;
+        } 
+        // 同样假设 val 不会等于现有值
+    }
+
+    // 2. 插入新节点（连接到 parent）
+    if (val < parent->val) {
+        parent->left = newNode;
+    } else { // val > parent->val
+        parent->right = newNode;
+    }
+
+    // 3. 返回原始根节点
+    return root;
+}
+// 450.搜索树中的删除操作
+// 删除二叉搜索树的节点
+// 删除了节点后，需要保持搜索树的特性，这需要一定的重构
+
+// 辅助函数：查找右子树中的最小节点（即后继节点）
+TreeNode* findMin(TreeNode* node) {
+    while (node->left != nullptr) {
+        node = node->left;
+    }
+    return node;
+}
+TreeNode* deleteNode(TreeNode* root, int key) {
+    if (root == nullptr) {
+        return nullptr; // 键不存在或到达叶子节点
+    }
+     // 1. 查找目标节点 (递归向下)
+    if (key < root->val) {
+        // 目标在左子树，并将左子树的返回值（可能的新根）链接回来
+        root->left = deleteNode(root->left, key);
+    }
+    else if (key > root->val) {
+        // 目标在右子树
+        root->right = deleteNode(root->right, key);
+    }
+     // 2. 找到了目标节点 (key == root->val)
+    else {
+        // 情况 A & B: 0 或 1 个子节点
+        // 如果只有一边，那就左节点挂载左边，右节点挂在右边，能保持BST特性
+        if (root->left == nullptr) {
+            // 包括了 0 个子节点（都为 nullptr）和只有右子节点的情况
+            TreeNode* temp = root->right;
+            delete root;
+            return temp;  // 返回右子节点作为新的根，如果左右都空，那返回的也是nullptr
+        }
+        else if (root->right == nullptr) {
+            TreeNode* temp = root->left;
+            delete root;
+            return temp; // 返回左子节点作为新的根
+        }
+        // 情况 C: 两个子节点
+        else {
+            // 找到右子树中的最小节点 (后继节点)
+            TreeNode* temp = findMin(root->right);
+            // a. 用后继节点的值覆盖当前节点的值
+            root->val = temp->val;
+            // b. 递归地删除后继节点（现在后继节点变成了“待删除”节点，它最多只有一个右子节点）
+            // 这是关键步骤，它利用了情况 A/B 的逻辑来简化删除
+            root->right = deleteNode(root->right, temp->val);
+        }
+    }
+    return root;
+}
+/**
+删除有两个子节点的二叉搜索树（BST）节点（情况 C）是 BST 删除操作中最复杂的部分，但其背后的逻辑是为了维护 BST 的核心有序性。
+
+核心问题：维护 BST 有序性
+当一个节点 N（有两个子节点）被删除后，必须用另一个节点 S 来填补 N 的位置，同时 S 必须满足以下条件：
+    S 必须大于 N 原来左子树中的所有值。
+    S 必须小于 N 原来右子树中的所有值。
+
+只有两个节点符合这个要求：
+    后继节点 (In-order Successor)： 右子树中最小的那个节点。
+    前驱节点 (In-order Predecessor)： 左子树中最大的那个节点。
+
+最常见的做法是使用后继节点 S 来替代被删除节点 N。
+
+替代节点（后继节点）的特点
+后继节点 S 有两个关键特点，使得用它来替代 N 变得可行且高效：
+
+有序性保证： S 是右子树中最小的，所以它天然大于左子树的所有节点，也小于右子树中除了 S 之外的所有节点。用 S 替换 N 后，BST 的有序性得到完美维护。
+
+简单删除： 由于 S 是其子树（即 N 的右子树）中的最小节点，这意味着 S 最多只有一个子节点——右子节点。它不可能有左子节点（否则它就不是最小的了）。
+
+步骤详解（以使用后继节点为例）
+假设要删除的节点是 N。
+
+步骤 1: 找到后继节点 S
+后继节点 S 位于 N 的右子树中，沿着左侧链一直向下走：
+
+S=findMin(N→right)
+步骤 2: 替换值，而不是替换节点本身
+为了简化父节点的指针操作，我们不直接将 S 移动到 N 的位置。而是采取一个巧妙的技巧：
+
+N→val=S→val
+现在，节点 N 的值已经被更新为 S 的值。从外部看，N 已经完成了它的使命。但是，现在树中出现了两个值为 S.val 的节点（一个在 N 的位置，一个在 S 的原位置）。
+
+步骤 3: 递归删除后继节点 S
+由于我们已经用 S 的值填充了 N 的位置，现在 S 的原始位置必须被删除。
+
+因为 S 最多只有一个右子节点（如上面所分析），所以删除 S 的操作现在简化为情况 B（删除一个只有 0 个或 1 个子节点的节点）。
+
+N→right=deleteNode(N→right,S→val)
+在递归调用中：
+
+deleteNode 函数会找到 S。
+
+由于 S 没有左子节点，它会进入情况 B 的逻辑，用 S 的右子节点（如果有）来替换 S 的位置，然后将该子节点返回给 N→right。
+
+这样，两个难题就分步解决了：
+
+维护有序性（通过值替换）。
+
+简化删除操作（将删除两个子节点的难题转化为删除一个零或一个子节点的简单问题）。
+
+总结图示
+假设我们删除节点 50：
+
+原始状态：
+
+      (50) <-- N
+     /    \
+   (30)   (70)
+         /   \
+       (60)  (80) <-- S (后继节点,指的是60)
+Step 1 & 2：替换值
+S=60。用 60 替换 50 的值。
+
+      (60) <-- N (值被 S 覆盖)
+     /    \
+   (30)   (70)
+         /   \
+       (60)  (80) <-- S (现在是冗余的,指的是60)
+Step 3：删除 S（递归调用）
+递归删除右子树中的 60，60 只有右子节点（80）。删除操作将 80 返回给 70 的左指针。
+
+最终状态：
+
+      (60) <-- 最终的 LCA
+     /    \
+   (30)   (70)
+             \
+             (80)
+通过这种方法，BST 的有序性得以完美保持
+*/
+// 669.修剪二叉搜索树
+TreeNode* trimBST(TreeNode* root, int low, int high) {
+    // 基线条件：如果当前节点为空，直接返回空
+    if (root == nullptr) {
+        return nullptr;
+    }
+     // 情况 1: 节点值大于 high (需要删除 root 及其右子树)
+    if (root->val > high) {
+        // LCA 必然在左子树。直接返回对左子树的修剪结果。
+        // 原来的 root 和右子树都被丢弃。
+        return trimBST(root->left, low, high);
+    }
+    // 情况 2: 节点值小于 low (需要删除 root 及其左子树)
+    if (root->val < low) {
+        // LCA 必然在右子树。直接返回对右子树的修剪结果。
+        // 原来的 root 和左子树都被丢弃。
+        return trimBST(root->right, low, high);
+    }
+    // 情况 3: 节点值在 [low, high] 范围内 (保留 root)
+    // 递归修剪左右子树，并将返回的新根连接到 root 上
+
+    // 保留 root
+    // 递归修剪 root 的左子树，将返回的新根连接到 root->left
+    // 递归修剪 root 的右子树，将返回的新根连接到 root->right
+    // 返回 root 作为当前子树的新根
+    root->left = trimBST(root->left, low, high);
+    root->right = trimBST(root->right, low, high);
+
+    return root;
+}
+// 108.将有序数组转换为二叉搜索树
+/**
+ * @brief 辅助递归函数，用于构建BST
+ * @param nums 升序数组
+ * @param left 当前子数组的起始索引
+ * @param right 当前子数组的结束索引
+ * @return 构建好的子树的根节点
+ */
+TreeNode* buildBST(std::vector<int>& nums, int left, int right) {
+    // 1. 递归终止条件
+    if (left > right) {
+        return nullptr;
+    }
+    // 2. 找到中间元素作为根节点
+    int mid = left + (right - left) / 2;
+    // 3. 创建根节点
+    TreeNode* root = new TreeNode(nums[mid]);
+    // 4. 递归构建左右子树
+    // 左子树的元素范围是 [left, mid - 1]
+    root->left = buildBST(nums, left, mid - 1);
+    // 右子树的元素范围是 [mid + 1, right]
+    root->right = buildBST(nums, mid + 1, right);
+    // 5. 返回根节点
+    return root;
+}
+
+/**
+ * @brief 将有序数组转换为高度平衡的二叉搜索树。
+ * * @param nums 升序排列的整数数组。
+ * @return 转换后的二叉搜索树的根节点指针。
+ */
+// 核心思想：中序遍历的逆过程，找到中间元素，作为根节点，然后递归处理左右子树
+TreeNode* sortedArrayToBST(std::vector<int>& nums) {
+    if (nums.empty()) {
+        return nullptr;
+    }
+    return buildBST(nums, 0, nums.size() - 1);
+}
+
+// 538.把二叉搜索树转换为累加树
+int sum = 0; // 用于存储已经访问过的更大节点值的累加和
+// 反向中序遍历（右 中 左），这实际会得到一个降序序列
+void traverse(TreeNode* root) {
+    if (root == nullptr) {
+        return;
+    }
+    // 1. 递归右子树 (Right)
+    // 右子树所有节点的值都大于当前节点，所以应该先处理
+    traverse(root->right);
+
+    // 2. 处理当前节点 (Middle)
+    // 节点的累加新值 = 节点原值 + 已经累计的更大值的和 (sum)
+    int original_val = root->val;
+    root->val = root->val + sum;
+    // 更新累加和，将当前节点的原值也加入到 sum 中
+    sum += original_val;
+    // 3. 递归左子树 (Left)
+    // 左子树所有节点的值都小于当前节点，在它们处理时，sum 已经包含了当前节点和所有右子树的值
+    traverse(root->left);
+}
+/**
+ * @brief 将二叉搜索树转换为累加树（Greater Sum Tree）。
+ * @param root 原二叉搜索树的根节点。
+ * @return 转换后的累加树的根节点。
+ */
+TreeNode* convertBST(TreeNode* root) {
+    sum = 0;
+    traverse(root);
+    return root;
+}
 
 
 
