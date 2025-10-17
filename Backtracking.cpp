@@ -492,6 +492,8 @@ std::vector<std::string> restoreIpAddresses02(std::string s) {
     backtrack(0);
     return result; 
 }
+
+// 78.子集
 /**
  * @brief 给定一个不含重复元素的整数数组 nums，返回所有可能的子集（幂集）。
  * @param nums 输入的整数数组。
@@ -541,4 +543,178 @@ std::vector<std::vector<int>> subsets(std::vector<int>& nums) {
 }
 
 
+// 90.子集II
+// 与78（子集）相比，90的关键区别在于：
+// 输入数组可能包含重复元素
+// 输出结果不能包含重复的子集
+
+/**
+ * @brief 返回数组所有可能的子集（幂集），不包含重复子集
+ * @param nums 可能包含重复元素的整数数组
+ * @return 所有不重复的子集
+ */
+
+std::vector<std::vector<int>> subsetsWithDup(std::vector<int>& nums) {
+    std::sort(nums.begin(), nums.end());
+    std::vector<std::vector<int>> result;
+    std::vector<int> path;
+
+    auto backtack = [&](int startIndex) -> void { 
+        result.push_back(path);
+        if (startIndex >= nums.size()) {
+            return;
+        }
+
+        for (int i = startIndex; i < nums.size(); i++) {
+              // 注意：i > startIndex 确保不是第一个元素，避免 nums[i-1] 越界
+              // i > startIndex必须在前面，不然i==startIndex 并且startIndex==0的时候
+              // i- 1 就数组越界了
+            if (i > startIndex && nums[i] == nums[i - 1]) {
+                continue;
+            }
+            path.push_back(nums[i]);
+            backtack(i + 1);
+            path.pop_back();
+        }
+
+    };
+
+    backtack(0);
+    return result;
+
+}
+
+// 491.递增子序列
+/**
+ * @brief 找出数组中所有的递增子序列（至少包含两个元素）
+ * @param nums 整数数组
+ * @return 所有不同的递增子序列
+ */
+// 在回溯算法的递归树中，"层"指的是递归树中同一深度的所有节点。
+// 方法	                适用场景	        特点
+// 排序+相邻比较	 可以改变原数组顺序	    if(i>startIndex && nums[i]==nums[i-1])
+// 同层set去重	    不能改变原数组顺序	    used.find(nums[i]) != used.end()
+std::vector<std::vector<int>> findSubsequences(std::vector<int>& nums) {
+    std::vector<std::vector<int>> result;
+    std::vector<int> path;
+    auto backtrack = [&](int startIndex) -> void {
+        // 终止条件
+        if (startIndex >= nums.size()) {
+            return;
+        }
+        if (path.size() >= 2) { // 满足条件才添加
+            result.push_back(path);
+        }
+         // 用于同一层去重
+        std::unordered_set<int> used;
+
+        for (int i = startIndex; i < nums.size(); i++) {
+            // 去重：同一层中相同的元素只使用一次
+            // 这个元素用过了，跳过
+            if (used.find(nums[i]) != used.end()) {
+                continue;
+            }
+            if (path.empty() || path.back() <= nums[i]) {
+                used.insert(nums[i]); // 标记已使用
+                path.push_back(nums[i]);
+                backtrack(i + 1);
+                path.pop_back();
+            }
+
+        }
+
+    };
+    backtrack(0);
+    return result;
+}
+// 46.全排列
+/**
+ * @brief 返回数组的所有全排列
+ * @param nums 不含重复元素的整数数组
+ * @return 所有可能的排列
+ */
+// 与组合/子集问题不同，顺序很重要
+// 每个元素在每个排列中都要使用恰好一次
+// 输入数组不含重复元素
+// 输出是所有可能的排列组合
+
+// 排列：顺序敏感型
+std::vector<std::vector<int>> permute(std::vector<int>& nums) {
+    std::vector<std::vector<int>> result;
+    std::vector<int> path;
+
+    std::vector<bool> used(nums.size(), false); // 标记每个索引的元素是否已使用
+    auto backtrack = [&]() -> void {
+        // 终止条件：路径长度等于数组长度
+        if (path.size() == nums.size()) {
+            result.push_back(path);
+            return;
+        }
+        // 尝试每个未使用的元素
+        for (int i = 0; i < nums.size(); i++) {
+            // 如果元素已被使用，跳过
+            if (used[i]) {
+                continue;
+            }
+            path.push_back(nums[i]);
+            used[i] = true;
+            backtrack();
+            // 撤销选择（回溯）
+            path.pop_back();
+            used[i]= false;
+        }
+    }
+    backtrack();
+    return result;
+}
+// 47.全排列II
+/**
+ * @brief 给定一个可能包含重复数字的数组 nums，返回所有不重复的全排列。
+ * @param nums 输入的整数数组。
+ * @return 所有不重复排列的列表。
+ */
+// 上面给的是不重复的数组，这里是有重复数字的数组
+// 排列是顺序是重要的，但原来数组中的顺序是不重要的
+std::vector<std::vector<int>> permuteUnique(std::vector<int>& nums) {
+    std::sort(nums.begin(), nums.end());
+    std::vector<std::vector<int>> result;
+    std::vector<int> path;
+
+    std::vector<bool> used(nums.size(), false);
+
+    auto backtrack = [&]() -> void {
+        if (path.size() == nums.size()) {
+            result.push_back(path);
+            return;
+        }
+
+        for (int i = 0; i < nums.size(); i++) {
+            if (used[i]) {
+                continue;
+            }
+            // 剪枝 2: 处理重复元素（核心去重逻辑）
+            // 必须在同一树层上跳过重复元素
+            // 条件：
+            // 1. i > 0 (确保 i-1 存在)
+            // 2. nums[i] == nums[i-1] (元素值相同)
+            // 3. used[i-1] == false (i-1 刚刚被回溯，说明我们在同一层)
+
+            // 这他妈谁能理解......
+            if (i > 0 && nums[i] == nums[i - 1] && used[i - 1] == false) {
+                continue;
+            }
+
+            path.push_back(nums[i]);
+            used[i] = true;
+
+            backtrack();
+
+            path.pop_back();
+            used[i] = false;
+        } 
+    };
+
+    backtrack();
+    return result;
+    
 }
