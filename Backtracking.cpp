@@ -718,3 +718,152 @@ std::vector<std::vector<int>> permuteUnique(std::vector<int>& nums) {
     return result;
     
 }
+
+
+
+// FIXME： 2过强需求
+// 332.重新安排行程
+/**
+ * @brief 重新安排行程，找到字典序最小的欧拉路径
+ * @param tickets 航线列表，每个元素为 [起点机场, 终点机场]
+ * @return 按字典序排列的行程结果
+ */
+// TODO: 实现重新安排行程的逻辑
+// 需要满足以下条件：
+// 1. 使用所有机票恰好一次
+// 2. 从JFK机场出发
+// 3. 返回字典序最小的有效行程
+
+// 可以使用：
+// - 图的表示（邻接表）
+// - 按字典序排序目的地
+// - Hierholzer算法或回溯算法
+// - 记录边的使用情况
+std::vector<std::string> findItinerary(std::vector<std::vector<std::string>>& tickets) {
+    // 1. 构建图结构：使用map存储每个机场可以到达的目的地及其使用次数
+    // key： 起点机场，  //std::map key: 目的地, value: 可用次数
+    std::unordered_map<std::string, std::map<std::string, int>> graph;
+    //     graph = {
+    //     "JFK": {
+    //         "SFO": 2,  // 有2张从JFK到SFO的机票
+    //         "ATL": 1   // 有1张从JFK到ATL的机票
+    //     }
+    //   }
+    for (auto& ticket : tickets) {
+        graph[ticket[0]][ticket[1]]++; // 记录每条航线的次数
+    }
+
+    std::vector<std::string> result;
+    result.push_back("JFK"); // 固定从JFK出发
+    // 注意，返回值是bool量
+    auto backtrack = [&](const std::string& airport) -> bool {
+        // 终止条件：如果路径长度等于机票数+1，说明所有机票都已使用
+        // 2张票，可以到达三个机场，所以是+1
+        if (result.size() == tickets.size() +1) {
+            return true;
+        }
+        // 遍历当前机场可以到达的所有目的地（已按字典序排序）
+        for (auto& [dest, count] : graph[airport]) {
+            // 如果还有可用的机票
+            if (count > 0) {
+                // 做选择
+                result.push_back(dest);
+                count--; // 标记这张机票已使用
+                // 递归
+                if (backtrack(dest)) {
+                    return true; // 找到有效解，直接返回
+                }
+                // 撤销选择（回溯）
+                result.pop_back();
+                count++; // 恢复机票状态
+            }
+        }
+
+        return false; // 当前路径无法找到有效解
+
+    };
+
+    backtrack("JFK");
+    return result;
+}
+// 专门用于解决欧拉路径/回路问题的Hierholzer算法
+vector<string> findItinerary02(vector<vector<string>>& tickets) {
+    // 1. 构建图结构
+    std::unordered_map<std::string, std::multiset<std::string>> graph; 
+    for (const auto& ticket : tickets) {
+        graph[ticket[0]].insert(ticket[1]);
+    }
+
+    vector<string> result;
+    // 2. Hierholzer算法
+    auto visit = [&](const std::string& airport) -> void {
+        // 遍历当前机场的所有目的地
+        while (!graph[airport].empty()) {
+            std::string next = *graph[airport].begin();
+            // 删除已使用的边
+            graph[airport].erase(graph[airport].begin());
+            visit(next); // 递归访问下一个机场
+        }
+        // 后序遍历，最后访问的节点最先加入结果
+        result.push_back(airport);
+    };
+
+    visit("JFK");
+    // 3. 反转结果（因为是后序遍历）
+    std::reverse(result.begin(), result.end()); 
+    return result;
+}
+
+// 51.N皇后
+/**
+ * @brief 解决N皇后问题，返回所有有效的解决方案
+ * @param n 皇后数量和棋盘大小
+ * @return 所有有效的皇后放置方案
+ */
+// 约束：行、列、主对角线、副对角线。只能有一个皇后
+// 对棋盘的每一行每一列都遍历，行用递归遍历，列用循环遍历
+std::vector<std::vector<std::string>> solveNQueens(int n) {
+    std::vector<std::vector<std::string>> result;
+    std::vector<std::string> board(n, std::string(n, '.'));
+
+    // 辅助数组记录冲突状态
+    std::vector<bool> cols(n, false); // 列冲突
+    // 主对角线冲突 (row - col + n - 1)
+    std::vector<bool> diag1(2 * n - 1, false);
+    // 副对角线冲突 (row + col)
+    std::vector<bool> diag2(2 * n - 1, false);
+    auto backtrack = [&](int row) {
+        if (row == n) {
+            result.push_back(board);
+            return;
+        }
+
+        for (int col = 0; col < n; col++) {
+            // 三种冲突都OK
+            if (!cols[col] && 
+                !diag1[row - col + n - 1] && 
+                !diag2[row + col]) {
+                // 放置皇后
+                board[row][col] = 'Q';
+                cols[col] = true;
+                diag1[row - col + n - 1] = true;
+                diag2[row + col] = true;
+
+                // 递归
+                backtrack(row + 1);
+                // 回溯
+                board[row][col] = '.';
+                cols[col] = false;
+                diag1[row - col + n - 1] = false;
+                diag2[row + col] = false;
+            }
+        }
+    };
+
+    backtrack(0);
+    return result;
+}
+
+
+
+
