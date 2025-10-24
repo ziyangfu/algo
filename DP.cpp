@@ -216,3 +216,113 @@ public:
     }
 };
 
+// 63.不同路径II
+class Solution {
+public:
+    /**
+     * 63. Unique Paths II - 不同路径II
+     * 
+     * @param obstacleGrid 包含障碍物的网格，0表示可通过，1表示障碍物
+     * @return 到达右下角的不同路径总数
+     */
+    // 设定好基本条件，明确当前与之前的状态关系
+    // 如果当前点是障碍物，那个到达这个点的方法数是0，则dp[i][j]保持为0
+    int uniquePathsWithObstacles(vector<vector<int>>& obstacleGrid) {
+        // 到达dp[i][j]点的方法数
+        std::vector<std::vector<int>> dp(m, std::vector<int>(n, 0));
+        int m = obstacleGrid.size(); // 行
+        int n = obstacleGrid[0].size(); // 列
+        if (obstacleGrid[0][0] == 1 || obstacleGrid[m - 1][n - 1] == 1) {
+            return 0;
+        }
+
+        dp[0][0] = 1;
+        // 填充第一行
+        for (int j = 1; j < n; j++) {
+            if (obstacleGrid[0][j] == 0) {
+                dp[0][j] = dp[0][j - 1];
+            }
+            // 如果有障碍物，则dp[0][j]保持为0
+        }
+
+        for (int i = 1; i < m; i++) {
+            if (obstacleGrid[i][0] == 0) {
+                dp[i][0] = dp[i - 1][0];
+            }
+            // 如果有障碍物，则dp[0][j]保持为0
+        }
+        // 填充其余位置
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                if (obstacleGrid[i][j] == 1) {
+                    dp[i][j] = 0; // 如果有障碍物，dp[i][j]保持为0
+                }
+                else {
+                    // 如果当前位置没有障碍物
+                    dp[i][j] = dp[i][j - 1] + dp[i - 1][j];
+                }
+                
+            }
+        }
+        return dp[m - 1][n - 1];
+    }
+};
+// 343.整数拆分
+class Solution {
+public:
+    /**
+     * 343. Integer Break - 整数拆分
+     * 
+     * @param n 要拆分的正整数
+     * @return 拆分后各部分乘积的最大值
+     */
+    int integerBreak(int n) {
+        // dp[i] 表示数字 i 拆分后的最大乘积
+         // 数组大小为 n + 1，方便直接使用索引 i.
+        std::vector<int> dp(n + 1, 0);
+        // 初始化基本情况
+        dp[1] = 1;
+        dp[2] = 1;
+        for (int i = 3; i <= n; i++) {
+            // 对于每个数字i，尝试所有可能的拆分点j
+            for (int j = 1; j < i; j++) {
+                // 比较三种情况：
+                // 1. j * (i-j) - 直接拆分成两部分
+                // 2. j * dp[i-j] - j不拆分，(i-j)继续拆分， (i-j)拆分的最大乘积就是dp[i-j]
+                // 3. dp[i] - 保持之前的最优解
+
+                // dp[i]加入最大值比对的原因是，会不断尝试max(j * (i - j), j * dp[i - j])
+                // 这些尝试中，可能还不如之前的解，所有要把之前的解加入进来
+                dp[i] = max(dp[i], max(j * (i - j), j * dp[i - j]));
+            }
+        }
+        return dp[n];
+    }
+};
+// 96. Unique Binary Search Trees - 不同的二叉搜索树
+class Solution {
+public:
+    /**
+     * 96. Unique Binary Search Trees - 不同的二叉搜索树
+     * 
+     * @param n 节点数量
+     * @return 满足条件的二叉搜索树的数量
+     */
+    int numTrees(int n) {
+        std::vector<int> dp(n + 1, 0);
+        dp[0] = 1;
+        dp[1] = 1;
+
+        for (int i = 2; i <= n; i++) {
+            for (int j = 1; j <= i; j++) {
+                // 根节点可以是我们选择的任何一个节点 j (从 1 到 i)，
+                // 所以总的 BST 数量 dp[i] 就是所有这些情况的总和
+                // 所以要用 += 累加
+                dp[i] += dp[j - 1] * dp[i - j];
+            }
+        }
+        return dp[n];
+    }
+};
+
+
